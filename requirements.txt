@@ -1,0 +1,6 @@
+discord.py
+python-dotenv
+Pillow
+aiohttp
+groq
+gTTS>=2.5.0
