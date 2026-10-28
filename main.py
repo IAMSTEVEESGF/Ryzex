@@ -9184,37 +9184,44 @@ async def hangup(ctx):
     if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
     else: await ctx.send(embed=embed)
 # =========================================================
-# CARL-BOT STYLE ROLE CREATION & DELETION
+# IMPROVED HYBRID ROLE CREATION & DELETION
 # =========================================================
 
-@bot.command(name="create", aliases=["cr", "createrole"])
+@bot.hybrid_command(name="create", aliases=["cr", "createrole"], description="Create a new role with a specific color")
+@app_commands.describe(args="Role name and optional color (e.g., 'VIP green' or 'Mod #FF0000')")
+@app_commands.default_permissions(administrator=True)
 async def createrole(ctx, *, args: str = None):
-    # 1. Admin/Owner Check
-    if not isinstance(ctx.author, discord.Member) or (not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS):
+    if not isinstance(ctx.author, discord.Member):
+        return await ctx.send("❌ This command can only be used in a server.")
+
+    if not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS:
         e = discord.Embed(description="<:3xge_:1561436999599005736> You need **Administrator** perms to use this.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
     if not ctx.guild.me.guild_permissions.manage_roles:
         e = discord.Embed(description="<:3xge_:1561436999599005736> I am missing the **Manage Roles** permission.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    # 2. Wrong Usage Check
     if not args:
-        embed = discord.Embed(
+        e = discord.Embed(
             title="<:3xge_:1561436999599005736> Wrong Usage",
-            description="**Correct Usage:**\n`,,cr <role name> [color]`\n\n**Examples:**\n`,,cr VIP Gold`\n`,,cr Mod #FF0000`\n`,,cr Member`",
+            description="**Correct Usage:**\n`,,cr <role name> [color]` or `/create`\n\n**Examples:**\n`,,cr VIP Gold`\n`,,cr Mod #FF0000`\n`,,cr Member`",
             color=discord.Color.red()
         )
-        return await ctx.send(embed=embed)
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        return await ctx.send(embed=e)
 
-    # 3. Parse Role Name and Color safely
+    # Parse color and role name
     parsed_color = discord.Color.default()
-    role_name = args
+    role_name = args.strip()
 
-    # Split by the last space (to see if the last word is a color)
-    parts = args.rsplit(" ", 1)
+    # Look for color at the end
+    parts = role_name.rsplit(" ", 1)
     if len(parts) == 2:
         potential_color = parts[1].lower().strip()
+        
         color_map = {
             "red": discord.Color.red(), "green": discord.Color.green(),
             "blue": discord.Color.blue(), "yellow": discord.Color.yellow(),
@@ -9223,62 +9230,68 @@ async def createrole(ctx, *, args: str = None):
             "black": discord.Color.black(), "blurple": discord.Color.blurple(),
             "gray": discord.Color.greyple(), "grey": discord.Color.greyple(),
         }
-        
+
         if potential_color in color_map:
             parsed_color = color_map[potential_color]
             role_name = parts[0]
         else:
+            # Check hex code
             hex_str = potential_color.replace("#", "").replace("0x", "")
             try:
                 parsed_color = discord.Color(int(hex_str, 16))
                 role_name = parts[0]
             except ValueError:
-                pass # It's not a color, so the whole thing is the role name
+                pass # Last word is not a color, so it stays part of the name
 
-    # 4. Create the Role
     try:
-        new_role = await ctx.guild.create_role(
-            name=role_name, 
-            color=parsed_color, 
-            reason=f"Role created by {ctx.author}"
-        )
+        new_role = await ctx.guild.create_role(name=role_name, color=parsed_color, reason=f"Role created by {ctx.author}")
         
         embed = discord.Embed(
             description=f"<:3xge_:1561443118426104000> Successfully created role {new_role.mention}.",
             color=new_role.color if new_role.color.value != 0 else discord.Color.default()
         )
         embed.set_footer(text=f"Created by {ctx.author.display_name}")
-        await ctx.send(embed=embed)
         
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
+        else: await ctx.send(embed=embed)
+
     except discord.Forbidden:
         e = discord.Embed(description="<:3xge_:1561436999599005736> Discord blocked me from creating this role. Make sure my role is higher.", color=discord.Color.red())
-        await ctx.send(embed=e)
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        else: await ctx.send(embed=e)
     except Exception as e:
+        # REAL ERROR
         e = discord.Embed(description=f"<:3xge_:1561436999599005736> Error: `{e}`", color=discord.Color.red())
-        await ctx.send(embed=e)
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        else: await ctx.send(embed=e)
 
 
-@bot.command(name="delete", aliases=["dr", "deleterole"])
+@bot.hybrid_command(name="delete", aliases=["dr", "deleterole"], description="Delete a role from the server")
+@app_commands.describe(role_name="The name of the role to delete")
+@app_commands.default_permissions(administrator=True)
 async def deleterole(ctx, *, role_name: str = None):
-    # 1. Admin/Owner Check
-    if not isinstance(ctx.author, discord.Member) or (not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS):
+    if not isinstance(ctx.author, discord.Member):
+        return await ctx.send("❌ This command can only be used in a server.")
+
+    if not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS:
         e = discord.Embed(description="<:3xge_:1561436999599005736> You need **Administrator** perms to use this.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
     if not ctx.guild.me.guild_permissions.manage_roles:
         e = discord.Embed(description="<:3xge_:1561436999599005736> I am missing the **Manage Roles** permission.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    # 2. Wrong Usage Check
     if not role_name:
-        embed = discord.Embed(
+        e = discord.Embed(
             title="<:3xge_:1561436999599005736> Wrong Usage",
-            description="**Correct Usage:**\n`,,dr <role name or ID>`\n\n**Examples:**\n`,,dr VIP`\n`,,dr @Mod`",
+            description="**Correct Usage:**\n`,,dr <role name or ID>` or `/delete`\n\n**Examples:**\n`,,dr VIP`\n`,,dr @Mod`",
             color=discord.Color.red()
         )
-        return await ctx.send(embed=embed)
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        return await ctx.send(embed=e)
 
-    # 3. Smart Role Finder
     role = None
     search = role_name.strip()
     
@@ -9295,29 +9308,30 @@ async def deleterole(ctx, *, role_name: str = None):
     if not role:
         role = discord.utils.find(lambda r: r.name.lower() == search.lower(), ctx.guild.roles)
 
-    # 4. Not Found Error
     if not role:
         e = discord.Embed(
             title="<:3xge_:1561436999599005736> Role Not Found",
             description=f"I couldn't find a role named `{role_name}` in this server.",
             color=discord.Color.red()
         )
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    # 5. Safety Checks
     if role == ctx.guild.default_role:
         e = discord.Embed(description="<:3xge_:1561436999599005736> You cannot delete the `@everyone` role.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
         
     if role.managed:
         e = discord.Embed(description="<:3xge_:1561436999599005736> I cannot delete this role because it is managed by a bot integration.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
         
     if role >= ctx.guild.me.top_role:
-        e = discord.Embed(description="<:3xge_:1561436999599005736> I cannot delete this role because it is higher than my highest role.", color=discord.Color.red())
+        e = discord.Embed(description="<:3xge_:1561436999599005736> I cannot delete this role because it is higher than or equal to my highest role.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    # 6. Delete the Role
     try:
         role_name_saved = role.name
         await role.delete(reason=f"Role deleted by {ctx.author}")
@@ -9327,14 +9341,18 @@ async def deleterole(ctx, *, role_name: str = None):
             color=discord.Color.green()
         )
         embed.set_footer(text=f"Deleted by {ctx.author.display_name}")
-        await ctx.send(embed=embed)
+        
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
+        else: await ctx.send(embed=embed)
         
     except discord.Forbidden:
         e = discord.Embed(description="<:3xge_:1561436999599005736> Discord blocked me from deleting this role. Check my permissions.", color=discord.Color.red())
-        await ctx.send(embed=e)
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        else: await ctx.send(embed=e)
     except Exception as e:
         e = discord.Embed(description=f"<:3xge_:1561436999599005736> Error: `{e}`", color=discord.Color.red())
-        await ctx.send(embed=e)
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        else: await ctx.send(embed=e)
 # =========================================================
 # RUN BOT
 # =========================================================
