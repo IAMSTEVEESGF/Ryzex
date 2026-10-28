@@ -9196,19 +9196,23 @@ async def hangup(ctx):
 )
 @app_commands.default_permissions(administrator=True)
 async def createrole(ctx, name: str, color: str = None, mentionable: bool = False, hoist: bool = False):
-    # 1. Permission Check (Embed)
+    # 1. Permission Check
     if not isinstance(ctx.author, discord.Member) or (not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS):
         e = discord.Embed(description="<:3xge_:1561436999599005736> You need **Administrator** perms to use this.", color=discord.Color.red())
         if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    # 2. Bot Permission Check (Embed)
+    # 2. Bot Permission Check
     if not ctx.guild.me.guild_permissions.manage_roles:
         e = discord.Embed(description="<:3xge_:1561436999599005736> I am missing the **Manage Roles** permission.", color=discord.Color.red())
         if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    # 3. Parse the Color
+    # 3. DEFER THE RESPONSE (This stops the 3-second timeout!)
+    if ctx.interaction:
+        await ctx.interaction.response.defer(ephemeral=True)
+
+    # 4. Parse the Color
     parsed_color = discord.Color.default()
     if color:
         color = color.lower().strip()
@@ -9228,10 +9232,9 @@ async def createrole(ctx, name: str, color: str = None, mentionable: bool = Fals
             try:
                 parsed_color = discord.Color(int(hex_str, 16))
             except ValueError:
-                # If they type a random word, make it a random color instead of crashing
                 parsed_color = discord.Color.random()
 
-    # 4. Create the Role
+    # 5. Create the Role
     try:
         new_role = await ctx.guild.create_role(
             name=name,
@@ -9247,19 +9250,19 @@ async def createrole(ctx, name: str, color: str = None, mentionable: bool = Fals
         )
         embed.set_footer(text=f"Created by {ctx.author.display_name}")
         
-        if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
+        # Send the response
+        if ctx.interaction: await ctx.interaction.followup.send(embed=embed)
         else: await ctx.send(embed=embed)
 
-    # 5. Discord API Error (Embed)
+    # 6. Errors
     except discord.Forbidden:
         e = discord.Embed(description="<:3xge_:1561436999599005736> Discord blocked me from creating this role. Make sure my role is higher.", color=discord.Color.red())
-        if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        if ctx.interaction: await ctx.interaction.followup.send(embed=e, ephemeral=True)
         else: await ctx.send(embed=e)
         
-    # 6. Unknown Error (Embed)
     except Exception as e:
         error_embed = discord.Embed(description=f"<:3xge_:1561436999599005736> Error: `{e}`", color=discord.Color.red())
-        if ctx.interaction: await ctx.interaction.response.send_message(embed=error_embed, ephemeral=True)
+        if ctx.interaction: await ctx.interaction.followup.send(embed=error_embed, ephemeral=True)
         else: await ctx.send(embed=error_embed)
 
 
