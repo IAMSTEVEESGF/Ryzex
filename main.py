@@ -9565,6 +9565,128 @@ async def hangup(ctx):
     if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
     else: await ctx.send(embed=embed)
 # =========================================================
+# ROLE CREATION & DELETION COMMANDS (PREFIX ONLY)
+# =========================================================
+
+# 1. CREATE ROLE
+@bot.command(name="create", aliases=["cr", "createrole"], description="Create a new role with a specific color")
+async def createrole(ctx, role_name: str, color: str = None):
+    # Strict Admin/Owner check
+    if not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> You need **Administrator** perms to use this.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+
+    if not ctx.guild.me.guild_permissions.manage_roles:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> I am missing the **Manage Roles** permission.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+
+    # Parse the color
+    parsed_color = discord.Color.default()
+    if color:
+        color = color.lower().strip()
+        color_map = {
+            "red": discord.Color.red(), "green": discord.Color.green(),
+            "blue": discord.Color.blue(), "yellow": discord.Color.yellow(),
+            "purple": discord.Color.purple(), "orange": discord.Color.orange(),
+            "pink": discord.Color.pink(), "white": discord.Color.white(),
+            "black": discord.Color.black(), "blurple": discord.Color.blurple(),
+            "gray": discord.Color.greyple(), "grey": discord.Color.greyple(),
+        }
+
+        if color in color_map:
+            parsed_color = color_map[color]
+        else:
+            hex_str = color.replace("#", "").replace("0x", "")
+            try:
+                parsed_color = discord.Color(int(hex_str, 16))
+            except ValueError:
+                parsed_color = discord.Color.random()
+
+    # Create the role
+    try:
+        new_role = await ctx.guild.create_role(
+            name=role_name,
+            color=parsed_color,
+            reason=f"Role created by {ctx.author}"
+        )
+        
+        embed = discord.Embed(
+            description=f"<:3xge_:1561443118426104000> Successfully created role {new_role.mention}.",
+            color=new_role.color if new_role.color.value != 0 else discord.Color.default()
+        )
+        embed.set_footer(text=f"Created by {ctx.author.display_name}")
+        await ctx.send(embed=embed)
+
+    except Exception as e:
+        err = discord.Embed(description=f"<:3xge_:1561436999599005736> Failed to create role: `{e}`", color=discord.Color.red())
+        await ctx.send(embed=err)
+
+
+# 2. DELETE ROLE
+@bot.command(name="delete", aliases=["dr", "deleterole"], description="Delete a role from the server")
+async def deleterole(ctx, *, role_name: str):
+    # Strict Admin/Owner check
+    if not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> You need **Administrator** perms to use this.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+
+    if not ctx.guild.me.guild_permissions.manage_roles:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> I am missing the **Manage Roles** permission.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+
+    # Smart Role Finder (Finds role by name, mention, or ID)
+    role = None
+    search = role_name.strip()
+    
+    # 1. Mention match <@&123>
+    if search.startswith("<@&") and search.endswith(">"):
+        try:
+            role_id = int(search[3:-1])
+            role = ctx.guild.get_role(role_id)
+        except ValueError:
+            pass
+            
+    # 2. Exact name match
+    if not role:
+        role = discord.utils.get(ctx.guild.roles, name=search)
+        
+    # 3. Case-insensitive name match
+    if not role:
+        role = discord.utils.find(lambda r: r.name.lower() == search.lower(), ctx.guild.roles)
+
+    if not role:
+        e = discord.Embed(description=f"<:3xge_:1561436999599005736> Could not find a role named `{role_name}`.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+
+    # Safety Checks before deleting
+    if role == ctx.guild.default_role:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> You cannot delete the `@everyone` role.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+        
+    if role.managed:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> I cannot delete this role because it is managed by an integration (like a bot or boost).", color=discord.Color.red())
+        return await ctx.send(embed=e)
+        
+    if role >= ctx.guild.me.top_role:
+        e = discord.Embed(description="<:3xge_:1561436999599005736> I cannot delete this role because it is higher than or equal to my highest role.", color=discord.Color.red())
+        return await ctx.send(embed=e)
+
+    # Delete the role
+    try:
+        role_name_saved = role.name
+        await role.delete(reason=f"Role deleted by {ctx.author}")
+        
+        embed = discord.Embed(
+            description=f"<:3xge_:1561443118426104000> Successfully deleted role **{role_name_saved}**.",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Deleted by {ctx.author.display_name}")
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        err = discord.Embed(description=f"<:3xge_:1561436999599005736> Failed to delete role: `{e}`", color=discord.Color.red())
+        await ctx.send(embed=err)
+# =========================================================
 # RUN BOT
 # =========================================================
 
