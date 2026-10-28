@@ -9128,7 +9128,7 @@ async def on_ready_jail_restore():
                 await release_user(g, m, "Auto-released (Timer completed)")
             if member:
                 bot.loop.create_task(auto_release(guild, member, remaining))
-                # =========================================================
+# =========================================================
 # USERPHONE SYSTEM
 # =========================================================
 
@@ -9184,44 +9184,34 @@ async def hangup(ctx):
     if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
     else: await ctx.send(embed=embed)
 # =========================================================
-# IMPROVED HYBRID ROLE CREATION & DELETION
+# Create role command with hybird 
 # =========================================================
 
-@bot.hybrid_command(name="create", aliases=["cr", "createrole"], description="Create a new role with a specific color")
-@app_commands.describe(args="Role name and optional color (e.g., 'VIP green' or 'Mod #FF0000')")
+@bot.hybrid_command(name="create", aliases=["cr", "createrole"], description="Creates a role")
+@app_commands.describe(
+    name="The name of the role",
+    color="The color of the role (name or hex code)",
+    mentionable="Can users ping this role?",
+    hoist="Display this role separately from others?"
+)
 @app_commands.default_permissions(administrator=True)
-async def createrole(ctx, *, args: str = None):
-    if not isinstance(ctx.author, discord.Member):
-        return await ctx.send("❌ This command can only be used in a server.")
-
-    if not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS:
+async def createrole(ctx, name: str, color: str = None, mentionable: bool = False, hoist: bool = False):
+    # 1. Permission Check (Embed)
+    if not isinstance(ctx.author, discord.Member) or (not ctx.author.guild_permissions.administrator and ctx.author.id not in OWNER_IDS):
         e = discord.Embed(description="<:3xge_:1561436999599005736> You need **Administrator** perms to use this.", color=discord.Color.red())
         if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
+    # 2. Bot Permission Check (Embed)
     if not ctx.guild.me.guild_permissions.manage_roles:
         e = discord.Embed(description="<:3xge_:1561436999599005736> I am missing the **Manage Roles** permission.", color=discord.Color.red())
         if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         return await ctx.send(embed=e)
 
-    if not args:
-        e = discord.Embed(
-            title="<:3xge_:1561436999599005736> Wrong Usage",
-            description="**Correct Usage:**\n`,,cr <role name> [color]` or `/create`\n\n**Examples:**\n`,,cr VIP Gold`\n`,,cr Mod #FF0000`\n`,,cr Member`",
-            color=discord.Color.red()
-        )
-        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
-        return await ctx.send(embed=e)
-
-    # Parse color and role name
+    # 3. Parse the Color
     parsed_color = discord.Color.default()
-    role_name = args.strip()
-
-    # Look for color at the end
-    parts = role_name.rsplit(" ", 1)
-    if len(parts) == 2:
-        potential_color = parts[1].lower().strip()
-        
+    if color:
+        color = color.lower().strip()
         color_map = {
             "red": discord.Color.red(), "green": discord.Color.green(),
             "blue": discord.Color.blue(), "yellow": discord.Color.yellow(),
@@ -9231,23 +9221,28 @@ async def createrole(ctx, *, args: str = None):
             "gray": discord.Color.greyple(), "grey": discord.Color.greyple(),
         }
 
-        if potential_color in color_map:
-            parsed_color = color_map[potential_color]
-            role_name = parts[0]
+        if color in color_map:
+            parsed_color = color_map[color]
         else:
-            # Check hex code
-            hex_str = potential_color.replace("#", "").replace("0x", "")
+            hex_str = color.replace("#", "").replace("0x", "")
             try:
                 parsed_color = discord.Color(int(hex_str, 16))
-                role_name = parts[0]
             except ValueError:
-                pass # Last word is not a color, so it stays part of the name
+                # If they type a random word, make it a random color instead of crashing
+                parsed_color = discord.Color.random()
 
+    # 4. Create the Role
     try:
-        new_role = await ctx.guild.create_role(name=role_name, color=parsed_color, reason=f"Role created by {ctx.author}")
+        new_role = await ctx.guild.create_role(
+            name=name,
+            color=parsed_color,
+            mentionable=mentionable,
+            hoist=hoist,
+            reason=f"Role created by {ctx.author}"
+        )
         
         embed = discord.Embed(
-            description=f"<:3xge_:1561443118426104000> Successfully created role {new_role.mention}.",
+            description=f"<:3xge_:1561443118426104000> Successfully created role {new_role.mention}.\n\n**Color:** `{new_role.color}`\n**Mentionable:** `{mentionable}`\n**Hoisted:** `{hoist}`",
             color=new_role.color if new_role.color.value != 0 else discord.Color.default()
         )
         embed.set_footer(text=f"Created by {ctx.author.display_name}")
@@ -9255,15 +9250,17 @@ async def createrole(ctx, *, args: str = None):
         if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
         else: await ctx.send(embed=embed)
 
+    # 5. Discord API Error (Embed)
     except discord.Forbidden:
         e = discord.Embed(description="<:3xge_:1561436999599005736> Discord blocked me from creating this role. Make sure my role is higher.", color=discord.Color.red())
         if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
         else: await ctx.send(embed=e)
+        
+    # 6. Unknown Error (Embed)
     except Exception as e:
-        # REAL ERROR
-        e = discord.Embed(description=f"<:3xge_:1561436999599005736> Error: `{e}`", color=discord.Color.red())
-        if ctx.interaction: await ctx.interaction.response.send_message(embed=e, ephemeral=True)
-        else: await ctx.send(embed=e)
+        error_embed = discord.Embed(description=f"<:3xge_:1561436999599005736> Error: `{e}`", color=discord.Color.red())
+        if ctx.interaction: await ctx.interaction.response.send_message(embed=error_embed, ephemeral=True)
+        else: await ctx.send(embed=error_embed)
 
 
 @bot.hybrid_command(name="delete", aliases=["dr", "deleterole"], description="Delete a role from the server")
