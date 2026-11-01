@@ -301,6 +301,20 @@ CREATE TABLE IF NOT EXISTS jailed_users (
 """)
 db.commit()
 
+# Security Settings Cache
+SECURITY_ENABLED = {}
+spam_tracker = {}
+nuke_tracker = {}
+
+# Create table to save settings
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS security_config (
+    guild_id INTEGER PRIMARY KEY,
+    enabled INTEGER DEFAULT 0
+)
+""")
+db.commit()
+
 # =========================================================
 # TICKET SYSTEM
 # =========================================================
@@ -4601,36 +4615,6 @@ async def sync(ctx):
         else: 
             await ctx.send(embed=embed)
 # =========================================================
-# GOON COMMAND
-# =========================================================
-
-@bot.hybrid_command(name="goon", description="Goon on someone as a joke!")
-@app_commands.check(owner_only_predicate)
-async def goon(ctx, member: discord.Member):
-    author = ctx.author
-    target = member
-
-    if author.id == target.id:
-        response_text = f"{author.mention} tried to goon to themselves but that's too weird... so they gooned to the air instead! 🫠"
-    else:
-        response_text = f"{author.mention} gooned to {target.mention} and felt amazing!"
-
-    embed = discord.Embed(
-        description=response_text,
-        color=discord.Color.purple()
-    )
-    embed.set_image(url="https://cdn.discordapp.com/attachments/1478277367029039115/1549139595638341712/togif.f686f4ae.gif?ex=6aaa44ed&is=6aa8f36d&hm=744c9b882dbac52cfbbacf98f015b05506ddf138c398aa694500388e25846f4d")
-
-    if ctx.interaction:
-        await ctx.interaction.response.send_message(embed=embed)
-    else:
-        if ctx.message:
-            try:
-                await ctx.message.delete()
-            except:
-                pass
-        await ctx.send(embed=embed)
-# =========================================================
 # ADVANCED FREE SERVER BACKUP & RESTORE SYSTEM (V2)
 # =========================================================
 
@@ -5839,105 +5823,6 @@ async def pat(ctx, member: discord.Member = None):
         await ctx.interaction.response.send_message(embed=embed)
     else:
         await ctx.send(embed=embed)
-
-# =========================================================
-# TAPE COMMAND
-# =========================================================
-
-TAPE_GIFS = [
-    "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZzduYnZ6ZDhwamNndTEwZXdoMm00MjQ4aTR4Nzd0Yjl5eDgwOWw4OCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3orieTvZ8aH6fQAg6c/giphy.gif"
-]
-
-@bot.hybrid_command(name="tape", description="Tape someone shut!")
-async def tape(ctx, member: discord.Member = None):
-    if member is None:
-        embed = discord.Embed(
-            description="❌ You need to specify someone to tape!",
-            color=discord.Color.red()
-        )
-        if ctx.interaction:
-            await ctx.interaction.response.send_message(embed=embed, ephemeral=True)
-        else:
-            await ctx.send(embed=embed)
-        return
-    
-    if member.id == ctx.author.id:
-        embed = discord.Embed(
-            description=f"🤐 {ctx.author.mention} tapes themselves... that's weird but okay!",
-            color=discord.Color.orange()
-        )
-        embed.set_image(url=random.choice(TAPE_GIFS))
-        if ctx.interaction:
-            await ctx.interaction.response.send_message(embed=embed)
-        else:
-            await ctx.send(embed=embed)
-        return
-    
-    embed = discord.Embed(
-        description=f"📼 {ctx.author.mention} taped {member.mention} 💤 shh",
-        color=discord.Color.from_rgb(30, 31, 34)
-    )
-    embed.set_image(url=random.choice(TAPE_GIFS))
-    embed.set_footer(text="Tape! Tape! Tape!")
-    
-    if ctx.interaction:
-        await ctx.interaction.response.send_message(embed=embed)
-    else:
-        await ctx.send(embed=embed)
-
-# =========================================================
-# PFPS COMMAND
-# =========================================================
-
-PFPS = [
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540485204093829200/7fe79c89936adbfbfdec5ae1dfff9a4b.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540484967937740830/8f27a0cc3a0f2781ad74efd4008558a9.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540485025127206952/18a826db626f61d6cda10c9d408ac1d2.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540485132392206397/f546b535e5d9e9136b91256284887a58.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540485265062363136/7b7f8abe8f534427053f9006f22c4e1e.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540485361979887746/b4182bff5b7505a6d35bc95413ea181e.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540496506199478273/a97d1dd51b9b2b71c35183ff3ca7464e.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540496612340797482/24cd5b1ba6d806349693f8da2ec9abe4.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540496650907160607/03380f5dd4d8a4030b243407a1434b82.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540496797963915366/515a558bee8ad52e389fff071f5eb243.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540497026876317776/62bbfac65dc9de498308f35c16c0a7c7.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540497133994778644/27943627bc3ecff837111b03ed600dba.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540497257386737735/b2d0d08376d624288d4dfee9dbdf28a1.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540497313552670830/6df443c27082110376ec88c3644a64f9.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540497340979355679/8615036d762bc981d7d6daa613a6a185.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540499415754739722/85c604a54b33c55f67c71254c4b474b3.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540499488060215317/f29d9a6419fd2ad5b0e9aeaf1fdd2761.png",
-    "https://cdn.discordapp.com/attachments/1489131525743182008/1540499558981697576/062c9bb7268ba112dc0d30058600d6dc.png"
-]
-
-@bot.hybrid_command(name="pfps", description="Get a random profile picture")
-async def pfps(ctx):
-    if not PFPS:
-        embed = discord.Embed(
-            description="❌ No PFPs have been added yet! Ask the bot owner to add some.",
-            color=discord.Color.red()
-        )
-        if ctx.interaction:
-            await ctx.interaction.response.send_message(embed=embed, ephemeral=True)
-        else:
-            await ctx.send(embed=embed)
-        return
-    
-    pfp_url = random.choice(PFPS)
-    
-    embed = discord.Embed(
-    title="👀 Random PFP",
-    description=f"Here's a random profile picture for you!",
-    color=discord.Color.from_rgb(220, 20, 60)
-)
-    embed.set_image(url=pfp_url)
-    embed.set_footer(text=f"Requested by {ctx.author.display_name}")
-    
-    if ctx.interaction:
-        await ctx.interaction.response.send_message(embed=embed)
-    else:
-        await ctx.send(embed=embed)
-
 # =========================================================
 # FRAKTUR COMMAND
 # =========================================================
@@ -6427,6 +6312,176 @@ async def role(ctx, member: discord.Member, *, role_name: str):
         embed = discord.Embed(description=f"❌ Failed to modify role: {e}", color=discord.Color.from_rgb(237, 66, 69))
         if ctx.interaction: await ctx.interaction.response.send_message(embed=embed, ephemeral=True)
         else: await ctx.send(embed=embed)
+# =========================================================
+# PROFESSIONAL SECURITY & ANTI-NUKE SYSTEM
+# =========================================================
+
+def is_security_enabled(guild_id):
+    if guild_id in SECURITY_ENABLED:
+        return SECURITY_ENABLED[guild_id]
+    
+    cursor.execute("SELECT enabled FROM security_config WHERE guild_id = ?", (guild_id,))
+    row = cursor.fetchone()
+    enabled = bool(row[0]) if row else False
+    SECURITY_ENABLED[guild_id] = enabled
+    return enabled
+
+@bot.hybrid_command(name="security", description="Enable or disable the server security system")
+@app_commands.describe(state="Turn security on or off")
+@app_commands.choices(state=[
+    app_commands.Choice(name="On", value="on"),
+    app_commands.Choice(name="Off", value="off")
+])
+@app_commands.default_permissions(administrator=True)
+async def security_cmd(ctx, state: str):
+    if not is_staff(ctx.author):
+        e = discord.Embed(description="<:3xge_:1561436999599005736> Staff only.", color=discord.Color.red())
+        if ctx.interaction: return await ctx.interaction.response.send_message(embed=e, ephemeral=True)
+        return await ctx.send(embed=e)
+
+    enabled = 1 if state == "on" else 0
+    cursor.execute("INSERT INTO security_config (guild_id, enabled) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET enabled = excluded.enabled", (ctx.guild.id, enabled))
+    db.commit()
+    SECURITY_ENABLED[ctx.guild.id] = bool(enabled)
+
+    if enabled:
+        desc = "The server is now protected by Ryzez Security.\n\n**Active Protections:**\n• Anti-Spam (Mute)\n• Anti-Bot Add (Ban)\n• Anti-Nuke (Mass Channel/Role Deletion)"
+        color = discord.Color.green()
+    else:
+        desc = "Security protections have been disabled for this server."
+        color = discord.Color.red()
+
+    embed = discord.Embed(
+        title="Security System",
+        description=desc,
+        color=color,
+        timestamp=datetime.utcnow()
+    )
+    
+    if ctx.interaction: await ctx.interaction.response.send_message(embed=embed)
+    else: await ctx.send(embed=embed)
+
+
+# --- EVENT: ANTI-SPAM (Run this inside your on_message event) ---
+async def check_antispam(message):
+    if not message.guild or not is_security_enabled(message.guild.id) or message.author.bot:
+        return False
+    
+    # Ignore staff
+    if isinstance(message.author, discord.Member) and is_staff(message.author):
+        return False
+
+    user_id = message.author.id
+    guild_id = message.guild.id
+    current_time = time.time()
+
+    if guild_id not in spam_tracker:
+        spam_tracker[guild_id] = {}
+    if user_id not in spam_tracker[guild_id]:
+        spam_tracker[guild_id][user_id] = []
+
+    spam_tracker[guild_id][user_id].append(current_time)
+    # Keep only messages from the last 3 seconds
+    spam_tracker[guild_id][user_id] = [t for t in spam_tracker[guild_id][user_id] if current_time - t < 3]
+
+    # If 5 messages in 3 seconds -> Mute
+    if len(spam_tracker[guild_id][user_id]) >= 5:
+        try:
+            await message.author.timeout(timedelta(minutes=10), reason="Security: Auto-muted for spamming")
+            
+            embed = discord.Embed(
+                title="Member Muted",
+                description=f"{message.author.mention} was automatically muted for 10 minutes.\n**Reason:** Spamming",
+                color=discord.Color.red()
+            )
+            await message.channel.send(embed=embed)
+            spam_tracker[guild_id][user_id] = [] # Reset
+            return True
+        except:
+            pass
+    return False
+
+
+# --- EVENT: ANTI-BOT ADD ---
+@bot.event
+async def on_member_join(member):
+    if member.bot and is_security_enabled(member.guild.id):
+        await asyncio.sleep(2) # Wait for audit logs to update
+        
+        try:
+            async for entry in member.guild.audit_logs(limit=1, action=discord.AuditLogAction.bot_add):
+                if entry.target.id == member.id:
+                    # If the person adding the bot is NOT the server owner
+                    if entry.user.id != member.guild.owner_id and entry.user.id not in OWNER_IDS:
+                        adder = member.guild.get_member(entry.user.id)
+                        if adder:
+                            # Strip their roles
+                            await adder.edit(roles=[], reason="Security: Unauthorized bot addition")
+                        
+                        # Ban the bot
+                        await member.ban(reason="Security: Unauthorized bot")
+                        
+                        embed = discord.Embed(
+                            title="Security Triggered",
+                            description=f"A bot ({member.mention}) was banned for unauthorized addition.\n\n**Action taken against:** {adder.mention if adder else 'Unknown'}\n**Reason:** Unauthorized bot add.",
+                            color=discord.Color.red()
+                        )
+                        await member.guild.system_channel.send(embed=embed) if member.guild.system_channel else None
+                    break
+        except:
+            pass
+
+
+# --- EVENT: ANTI-NUKE (Channels & Roles) ---
+async def check_antinuke(guild, user, action_type):
+    if not is_security_enabled(guild.id) or user is None or user.id == bot.user.id or user.id == guild.owner_id or user.id in OWNER_IDS:
+        return False
+
+    current_time = time.time()
+    
+    if guild.id not in nuke_tracker:
+        nuke_tracker[guild.id] = {}
+    if user.id not in nuke_tracker[guild.id]:
+        nuke_tracker[guild.id][user.id] = []
+
+    nuke_tracker[guild.id][user.id].append(current_time)
+    nuke_tracker[guild.id][user.id] = [t for t in nuke_tracker[guild.id][user.id] if current_time - t < 10]
+
+    # 3 actions in 10 seconds
+    if len(nuke_tracker[guild.id][user.id]) >= 3:
+        try:
+            member = guild.get_member(user.id)
+            if member and guild.me.top_role > member.top_role:
+                # Strip roles
+                await member.edit(roles=[], reason=f"Security: Anti-Nuke ({action_type})")
+                
+                embed = discord.Embed(
+                    title="Security Triggered",
+                    description=f"{member.mention} has had their roles stripped.\n**Reason:** Mass {action_type} detected.",
+                    color=discord.Color.red()
+                )
+                if guild.system_channel:
+                    await guild.system_channel.send(embed=embed)
+        except:
+            pass
+        
+        nuke_tracker[guild.id][user.id] = []
+        return True
+    return False
+
+@bot.event
+async def on_guild_channel_delete(channel):
+    async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_delete):
+        if entry.target.id == channel.id:
+            await check_antinuke(channel.guild, entry.user, "channel deletion")
+            break
+
+@bot.event
+async def on_guild_role_delete(role):
+    async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
+        if entry.target.id == role.id:
+            await check_antinuke(role.guild, entry.user, "role deletion")
+            break
 # =========================================================
 # SPANK COMMAND
 # =========================================================
@@ -9406,6 +9461,7 @@ async def deleterole_slash(interaction: discord.Interaction, role: discord.Role)
         ))
     except Exception as e:
         await interaction.followup.send(embed=discord.Embed(description=f"<:3xge_:1561436999599005736> Error: `{e}`", color=discord.Color.red()), ephemeral=True)
+        
 # =========================================================
 # RUN BOT
 # =========================================================
